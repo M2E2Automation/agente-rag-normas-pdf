@@ -26,8 +26,8 @@ st.markdown("""
         color: #0F172A;
     }
     section[data-testid="stSidebar"] {
-        background-color: #F0F9FF;
-        border-right: 1px solid #BAE6FD;
+        background-color: #CBE7FA;
+        border-right: 2px solid #7DD3FC;
     }
     /* Garante contraste alto nas letras das abas (inativas e ativas) */
     button[data-baseweb="tab"] {
@@ -102,6 +102,9 @@ st.markdown("""
         color: #0F172A;
         line-height: 1.6;
         box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
+    }
+    [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {
+        color: #0F172A !important;
     }
 </style>
 """, unsafe_allow_html=True)
