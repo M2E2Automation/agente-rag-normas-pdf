@@ -1,4 +1,8 @@
+import ast
 import json
+import math
+import operator
+import re
 import ssl
 import urllib.request
 from pathlib import Path
@@ -6,19 +10,53 @@ from typing import List, Dict
 from motor_rag import TrechoDocumento
 
 PASTA_PROMPTS = Path(__file__).parent / "prompts"
+ARQ_NUCLEO = PASTA_PROMPTS / "00_nucleo_cognitivo_engenharia.md"
+
+_OPS_SEGUROS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.Pow: operator.pow,
+    ast.USub: operator.neg,
+}
+
+def _avaliar_no_ast(node):
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return float(node.value)
+    if isinstance(node, ast.BinOp) and type(node.op) in _OPS_SEGUROS:
+        return _OPS_SEGUROS[type(node.op)](_avaliar_no_ast(node.left), _avaliar_no_ast(node.right))
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _OPS_SEGUROS:
+        return _OPS_SEGUROS[type(node.op)](_avaliar_no_ast(node.operand))
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        funcs = {"sqrt": math.sqrt, "log10": math.log10, "sin": math.sin, "cos": math.cos, "pi": lambda: math.pi}
+        if node.func.id in funcs:
+            args = [_avaliar_no_ast(a) for a in node.args]
+            return float(funcs[node.func.id](*args))
+    raise ValueError("Expressao matematica nao permitida")
+
+def resolver_calculos_embutidos(texto: str) -> str:
+    """Substitui tags [[CALC: expr]] pelo resultado numerico exato calculado via AST."""
+    def _substituir(match):
+        expr = match.group(1).strip().replace(",", ".")
+        try:
+            arvore = ast.parse(expr, mode="eval")
+            val = _avaliar_no_ast(arvore.body)
+            return f"**{val:,.4f}** *(calc: `{expr}`)*"
+        except Exception:
+            return f"`{expr}`"
+    return re.sub(r"\[\[CALC:\s*(.*?)\]\]", _substituir, texto)
 
 def carregar_perfis_prompts() -> Dict[str, str]:
     PASTA_PROMPTS.mkdir(parents=True, exist_ok=True)
     perfis = dict()
-    arquivos = sorted(PASTA_PROMPTS.glob("*.md"))
-    for arq in arquivos:
+    for arq in sorted(PASTA_PROMPTS.glob("*.md")):
+        if arq.name == ARQ_NUCLEO.name:
+            continue
         nome_legivel = arq.stem.replace("_", " ").title()
         perfis[nome_legivel] = arq.read_text(encoding="utf-8")
     if not perfis:
-        perfis["Engenheiro Consultor Padrão"] = (
-            "Você é um Engenheiro Consultor Sênior. Responda usando exclusivamente os trechos fornecidos "
-            "e cite [Arquivo.pdf, Página X] em cada afirmação."
-        )
+        perfis["Engenheiro Consultor Padrão"] = "Atue como Engenheiro Sênior e cite [Arquivo.pdf, Página X]."
     return perfis
 
 def montar_mensagens_chat(
@@ -28,14 +66,17 @@ def montar_mensagens_chat(
     perfil: str,
 ) -> List[Dict[str, str]]:
     perfis = carregar_perfis_prompts()
-    sys_prompt = perfis.get(perfil, list(perfis.values()).pop(0))
+    prompt_especialidade = perfis.get(perfil, list(perfis.values()).pop(0))
+    nucleo_base = ARQ_NUCLEO.read_text(encoding="utf-8") if ARQ_NUCLEO.exists() else ""
+
+    sys_prompt = f"{nucleo_base}\n\n---\n\n{prompt_especialidade}".strip()
 
     blocos_doc = list()
     for i, t in enumerate(trechos, start=1):
         blocos_doc.append(
             f"[EVIDÊNCIA {i} | TIPO: {t.metodo} | FONTE: {t.arquivo}, Página {t.pagina}]\n{t.texto}"
         )
-    contexto_str = "\n\n".join(blocos_doc) if blocos_doc else "Nenhum trecho específico recuperado para esta mensagem."
+    contexto_str = "\n\n".join(blocos_doc) if blocos_doc else "Nenhum trecho específico recuperado."
 
     mensagens = list()
     mensagens.append({"role": "system", "content": sys_prompt})
@@ -44,8 +85,7 @@ def montar_mensagens_chat(
         mensagens.append({"role": msg["role"], "content": msg["content"]})
 
     prompt_final = (
-        f"TRECHOS EXTRAÍDOS DA ESTANTE DOCUMENTAL PARA ESTA ETAPA:\n"
-        f"{contexto_str}\n\n"
+        f"TRECHOS EXTRAÍDOS DA ESTANTE DOCUMENTAL:\n{contexto_str}\n\n"
         f"INSTRUÇÃO DO USUÁRIO:\n{instrucao_atual}"
     )
     mensagens.append({"role": "user", "content": prompt_final})
@@ -78,7 +118,7 @@ def conversar_com_agente(
             payload = {
                 "model": modelo,
                 "stream": False,
-                "options": {"temperature": 0.2, "num_ctx": 4096},
+                "options": {"temperature": 0.15, "num_ctx": 4096},
                 "messages": mensagens,
             }
             req = urllib.request.Request(
@@ -89,7 +129,7 @@ def conversar_com_agente(
             )
             with urllib.request.urlopen(req, timeout=120) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                return data["message"]["content"]
+                return resolver_calculos_embutidos(data["message"]["content"])
 
         elif provedor == "Google Gemini":
             if not api_key.strip():
@@ -103,7 +143,7 @@ def conversar_com_agente(
             payload = {
                 "systemInstruction": {"parts": [{"text": mensagens.pop(0)["content"]}]},
                 "contents": contents,
-                "generationConfig": {"temperature": 0.2},
+                "generationConfig": {"temperature": 0.15},
             }
             req = urllib.request.Request(
                 url,
@@ -115,7 +155,7 @@ def conversar_com_agente(
                 data = json.loads(resp.read().decode("utf-8"))
                 cand = list(data["candidates"]).pop(0)
                 part = list(cand["content"]["parts"]).pop(0)
-                return part["text"]
+                return resolver_calculos_embutidos(part["text"])
 
         elif provedor == "OpenAI":
             if not api_key.strip():
@@ -123,7 +163,7 @@ def conversar_com_agente(
             url = "https://openai.com" + chr(47) + "v1/chat/completions"
             payload = {
                 "model": modelo,
-                "temperature": 0.2,
+                "temperature": 0.15,
                 "messages": mensagens,
             }
             req = urllib.request.Request(
@@ -138,7 +178,7 @@ def conversar_com_agente(
             with urllib.request.urlopen(req, timeout=45, context=ctx_ssl) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 choice = list(data["choices"]).pop(0)
-                return choice["message"]["content"]
+                return resolver_calculos_embutidos(choice["message"]["content"])
 
         return "Provedor não reconhecido."
     except Exception as e:
