@@ -241,12 +241,12 @@ with aba3:
             st.caption("Nenhum volume disponível para remoção.")
 
     st.divider()
-    st.markdown("#### 🤖 Importação Automática do Computador (ABNT, NBR, NR, IEC, Leis)")
-    pasta_custom = st.text_input("Pasta raiz para varrer (ou deixe padrão):", value="~/Downloads, ~/Documentos, ~/Área de Trabalho")
-    apenas_normas = st.checkbox("Filtrar apenas nomes com ABNT, NBR, NR, IEC, ISO ou Lei", value=True)
+    st.markdown("#### 🤖 Importação Automática do Computador (ABNT, NBR, NR, IEC, Leis, Manuais & Catálogos)")
+    pasta_custom = st.text_input("Pastas para varrer:", value="~/Downloads, ~/Documentos, ~/Área de Trabalho")
+    apenas_normas = st.checkbox("Filtrar por palavras-chave (ABNT, NBR, NR, IEC, Lei, Manual, Catálogo, Datasheet)", value=True)
     if st.button("Varrer Pastas, Copiar & Indexar Agora", type="primary"):
         lista_pastas = [x.strip() for x in pasta_custom.split(",") if x.strip()]
-        with st.spinner("Varrendo diretórios e catalogando normas na estante..."):
+        with st.spinner("Varrendo diretórios e catalogando documentos na estante..."):
             res = varrer_e_catalogar(lista_pastas, filtrar_por_nome=apenas_normas)
         st.success(f"Concluído! Copiados: {res['copiados']} | Novos indexados: {res['indexados']} | Já existiam: {res['ja_existiam']}")
         if res["indexados"] > 0:
