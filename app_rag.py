@@ -125,6 +125,8 @@ docs = listar_documentos_indexados()
 nomes_docs = [list(d).pop(0) for d in docs]
 
 with st.sidebar:
+    perfis_dict = carregar_perfis_prompts()
+    perfil_agente = st.selectbox("🎓 Especialidade de Engenharia (prompts/):", list(perfis_dict.keys()), index=0)
     st.markdown("### ⚙️ Motor de Inteligência")
     provedor = st.selectbox(
         "Provedor LLM:",
@@ -195,8 +197,7 @@ with aba1:
                     trechos=trechos,
                     provedor=provedor,
                     api_key=api_key,
-                    modelo=modelo,
-                    perfil=perfil_agente,
+                    modelo=modelo, perfil=perfil_agente,
                 )
             st.markdown(resposta)
 
