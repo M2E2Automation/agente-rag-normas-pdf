@@ -197,7 +197,6 @@ with aba1:
                     trechos=trechos,
                     provedor=provedor,
                     api_key=api_key,
-                    modelo=modelo, perfil=perfil_agente,
                 )
             st.markdown(resposta)
 
