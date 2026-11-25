@@ -150,7 +150,7 @@ def destacar_termos_html(texto: str, pergunta: str) -> str:
     if not palavras:
         return txt_esc
     padrao = re.compile(r"(" + "|".join(set(palavras)) + r")", flags=re.IGNORECASE)
-    return padrao.sub(r"<mark style="background-color:#FFF3CD; padding:1px 3px; border-radius:3px;"><b>\1</b></mark>", txt_esc)
+    return padrao.sub(r"<mark style='background-color:#FFF3CD; padding:1px 3px; border-radius:3px;'><b>\\1</b></mark>", txt_esc)
 
 def listar_documentos_indexados() -> List[Tuple[str, int]]:
     init_db_rag()
