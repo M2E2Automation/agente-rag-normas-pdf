@@ -20,38 +20,68 @@ init_db_rag()
 # Estilo customizado: Estante de Livros High-Tech (Clean & Sofisticado)
 st.markdown("""
 <style>
+    /* Fundo azul claro suave em toda a aplicacao */
     .stApp {
-        background-color: #F8FAFC;
+        background-color: #E0F2FE;
+        color: #0F172A;
+    }
+    section[data-testid="stSidebar"] {
+        background-color: #F0F9FF;
+        border-right: 1px solid #BAE6FD;
+    }
+    /* Garante contraste alto nas letras das abas (inativas e ativas) */
+    button[data-baseweb="tab"] {
+        background-color: #BAE6FD !important;
+        color: #0F172A !important;
+        border-radius: 8px 8px 0 0 !important;
+        padding: 0.6rem 1.2rem !important;
+        margin-right: 4px !important;
+        font-weight: 600 !important;
+    }
+    button[data-baseweb="tab"] p {
+        color: #0F172A !important;
+        font-size: 0.98rem !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #0284C7 !important;
+        border-bottom: 3px solid #0F172A !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] p {
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+    }
+    /* Textos gerais, labels e titulos em azul-marinho escuro */
+    .stMarkdown, .stTextInput label, .stSelectbox label, .stSlider label, h1, h2, h3, h4 {
+        color: #0F172A !important;
     }
     .shelf-header {
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
         padding: 1.6rem 2rem;
         border-radius: 14px;
-        border-left: 6px solid #0284C7;
-        color: #F8FAFC;
+        border-left: 6px solid #38BDF8;
+        color: #FFFFFF;
         margin-bottom: 1.2rem;
-        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
     }
     .shelf-header h1 {
-        color: #FFFFFF;
+        color: #FFFFFF !important;
         font-size: 1.75rem;
         margin: 0 0 0.3rem 0;
         font-weight: 700;
-        letter-spacing: -0.02em;
     }
     .shelf-header p {
-        color: #CBD5E1;
+        color: #E0F2FE !important;
         margin: 0;
         font-size: 0.95rem;
     }
     .book-card {
         background: #FFFFFF;
-        border: 1px solid #E2E8F0;
+        border: 1px solid #7DD3FC;
         border-left: 5px solid #0284C7;
         border-radius: 10px;
         padding: 1rem 1.2rem;
         margin-bottom: 0.8rem;
-        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
     }
     .book-title {
         font-weight: 700;
@@ -60,18 +90,18 @@ st.markdown("""
         margin-bottom: 0.25rem;
     }
     .book-meta {
-        color: #64748B;
-        font-size: 0.82rem;
+        color: #334155;
+        font-size: 0.85rem;
     }
     .ai-verdict {
         background: #FFFFFF;
-        border: 1px solid #BAE6FD;
+        border: 1px solid #7DD3FC;
         border-left: 5px solid #0284C7;
         border-radius: 10px;
         padding: 1.2rem 1.4rem;
         color: #0F172A;
         line-height: 1.6;
-        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.06);
+        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
     }
 </style>
 """, unsafe_allow_html=True)

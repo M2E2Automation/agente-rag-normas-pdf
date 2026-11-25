@@ -11,7 +11,7 @@ import numpy as np
 
 DB_RAG = "base_conhecimento_rag.sqlite"
 INDEX_PATH = "indice_vetorial_rag.pkl"
-MAX_PDF_BYTES = 50 * 1024 * 1024
+MAX_PDF_BYTES = 1024 * 1024 * 1024
 
 @dataclass
 class TrechoDocumento:
@@ -61,7 +61,7 @@ def fatiar_texto(texto: str, tamanho_chunk: int = 900, overlap: int = 180) -> Li
 def indexar_pdf(caminho_ou_buffer, nome_arquivo: str) -> int:
     nome_seguro = sanitizar_nome_arquivo(nome_arquivo)
     if hasattr(caminho_ou_buffer, "size") and caminho_ou_buffer.size > MAX_PDF_BYTES:
-        raise ValueError("Arquivo PDF excede o limite de seguranca (50 MB).")
+        raise ValueError("Arquivo PDF excede o limite de seguranca (1 GB).")
 
     init_db_rag()
     reader = PdfReader(caminho_ou_buffer)
