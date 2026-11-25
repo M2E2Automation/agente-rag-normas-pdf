@@ -1,3 +1,4 @@
+from agente_consultor import conversar_com_agente, PERFIS_ESTRUTURA
 from importador_lote import varrer_e_catalogar
 import streamlit as st
 from motor_rag import (
@@ -17,6 +18,9 @@ st.set_page_config(
     layout="wide",
 )
 init_db_rag()
+if 'chat_rag' not in st.session_state: st.session_state['chat_rag'] = list()
+if 'ultimos_trechos' not in st.session_state: st.session_state['ultimos_trechos'] = list()
+if 'ultima_instrucao' not in st.session_state: st.session_state['ultima_instrucao'] = ''
 
 # Estilo customizado: Estante de Livros High-Tech (Clean & Sofisticado)
 st.markdown("""
@@ -153,49 +157,64 @@ with st.sidebar:
     c_s2.metric("Trechos", total_trechos_geral)
 
 aba1, aba2, aba3 = st.tabs([
-    "🔍 1. Pesquisa & Parecer IA",
+    "💬 1. Sala Técnica (Chat & Propostas)",
     "📚 2. Estante Digital (Acervo)",
     "📥 3. Catalogar & Gerir PDFs",
 ])
 
 with aba1:
-    pergunta = st.text_input(
-        "Qual norma, artigo, requisito técnico ou cláusula deseja consultar?",
-        placeholder="Ex.: Quais são os prazos de garantia, exigências ambientais ou critérios de dimensionamento?",
-    )
+    st.caption("💡 **Exemplos de instruções:** *'Extraia os dados nominais deste equipamento e monte uma tabela técnica'* • *'Redija o memorial descritivo de conformidade com a NBR para nossa proposta comercial'*")
+    for msg in st.session_state["chat_rag"]:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-    if pergunta:
-        resultados = buscar_trechos_relevantes(pergunta, top_k=top_k, filtro_arquivo=filtro_selecionado)
-        if not resultados:
-            st.warning("Nenhum trecho correspondente encontrado no escopo selecionado. Tente termos presentes na norma.")
-        else:
-            sintese_ia = ""
-            if provedor != "Apenas Busca Extrativa (Sem API)":
-                with st.spinner(f"Consultando estante e redigindo parecer via {provedor} ({modelo})..."):
-                    sintese_ia = gerar_sintese_llm(pergunta, resultados, provedor, api_key, modelo)
-                st.markdown("#### 🧠 Parecer Técnico Sintetizado (Auditado por Fontes)")
-                st.markdown(f"<div class='ai-verdict'>{sintese_ia.replace(chr(10), '<br>')}</div>", unsafe_allow_html=True)
-                st.write("")
+    instrucao = st.chat_input("Instrua o agente (ex.: Extraia as especificações do equipamento e redija o texto da proposta comercial)...")
+    if instrucao:
+        st.session_state["chat_rag"].append({"role": "user", "content": instrucao})
+        with st.chat_message("user"):
+            st.markdown(instrucao)
 
-            pdf_parecer = gerar_pdf_consulta_rag(pergunta, filtro_selecionado, resultados, sintese_ia)
-            st.download_button(
-                label="📄 Baixar Parecer Técnico Completo (PDF)",
-                data=pdf_parecer,
-                file_name="Parecer_Tecnico_Estante_RAG.pdf",
-                mime="application/pdf",
-                type="primary",
-            )
+        trechos = buscar_trechos_relevantes(
+            instrucao,
+            top_k=top_k,
+            filtro_arquivo=filtro_selecionado,
+            filtro_categoria=categoria_sel if "categoria_sel" in locals() else None,
+        )
+        st.session_state["ultimos_trechos"] = trechos
+        st.session_state["ultima_instrucao"] = instrucao
 
-            st.divider()
-            st.markdown(f"#### 📑 Evidências Originais Recuperadas ({len(resultados)} trechos)")
-            for i, item in enumerate(resultados, start=1):
-                html_destacado = destacar_termos_html(item.texto, pergunta)
-                with st.expander(
-                    f"Fonte {i} | 📘 {item.arquivo} — Página {item.pagina} (Relevância: {item.score*100:.1f}%)",
-                    expanded=(i <= 2),
-                ):
-                    st.markdown(html_destacado, unsafe_allow_html=True)
-                    st.caption(f"Rastreabilidade: Arquivo `{item.arquivo}` • Página `{item.pagina}` • Registro `#{item.id}`")
+        with st.chat_message("assistant"):
+            with st.spinner(f"Analisando estrutura documental e redigindo resposta ({modelo})..."):
+                resposta = conversar_com_agente(
+                    historico=st.session_state["chat_rag"][:-1],
+                    instrucao_atual=instrucao,
+                    trechos=trechos,
+                    provedor=provedor,
+                    api_key=api_key,
+                    modelo=modelo,
+                )
+            st.markdown(resposta)
+
+        st.session_state["chat_rag"].append({"role": "assistant", "content": resposta})
+        st.rerun()
+
+    if st.session_state["chat_rag"]:
+        st.divider()
+        ultima_resp = st.session_state["chat_rag"][-1]["content"]
+        col_exp1, col_exp2 = st.columns(2)
+        with col_exp1:
+            pdf_bytes = gerar_pdf_consulta_rag(st.session_state["ultima_instrucao"], filtro_selecionado, st.session_state["ultimos_trechos"], ultima_resp)
+            st.download_button(label="📄 Baixar Documento / Proposta em PDF", data=pdf_bytes, file_name="Relatorio_Proposta_Tecnica_RAG.pdf", mime="application/pdf", type="primary")
+        with col_exp2:
+            st.download_button(label="📝 Baixar Texto em Markdown (.MD)", data=ultima_resp.encode("utf-8"), file_name="Proposta_Memorial_Descritivo.md", mime="text/markdown")
+
+        if st.session_state["ultimos_trechos"]:
+            with st.expander(f"🔎 Auditar Evidências Originais Utilizadas ({len(st.session_state['ultimos_trechos'])} trechos)"):
+                for i, item in enumerate(st.session_state["ultimos_trechos"], start=1):
+                    html_dest = destacar_termos_html(item.texto, st.session_state["ultima_instrucao"])
+                    st.markdown(f"**Fonte {i}: 📘 {item.arquivo} — Página {item.pagina}** *(Relevância: {item.score*100:.1f}%)*")
+                    st.markdown(html_dest, unsafe_allow_html=True)
+                    st.divider()
 
 with aba2:
     st.markdown("#### 📚 Acervo Digital Catalogado")
