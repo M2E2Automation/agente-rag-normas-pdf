@@ -34,11 +34,21 @@ class TrechoDocumento:
 
 def classificar_categoria_documento(nome_arquivo: str) -> str:
     n = nome_arquivo.lower()
+    if any(k in n for k in ["solar", "fotovoltaic", "eolica", "bateria", "bess", "armazenamento", "termoacumul", "energia limpa", "eletrific"]):
+        return "Energia Limpa, BESS & Termoacumulação"
+    if any(k in n for k in ["termodinamica", "termodinâmica", "calor", "refrigerac", "hvac", "entalpia"]):
+        return "Física & Termodinâmica Avançada"
+    if any(k in n for k in ["fluido", "hidraulic", "hidráulic", "bomba", "mecanica dos fluidos", "tubulac"]):
+        return "Fluidodinâmica & Hidráulica"
+    if any(k in n for k in ["eletromag", "maxwell", "eletric", "elétric", "potencia", "potência", "transformador", "motor"]):
+        return "Eletromagnetismo & Engenharia Elétrica"
+    if any(k in n for k in ["matemat", "calculo", "cálculo", "geometria", "fractal", "algebra", "álgebra", "fisica", "física"]):
+        return "Matemática, Física & Geometria/Fractais"
     if any(k in n for k in ["manual", "instruc", "operac", "manutenc", "guia"]):
         return "Manual de Máquina/Equipamento"
-    if any(k in n for k in ["catalog", "catálog", "datasheet", "especific", "ficha", "brochure"]):
+    if any(k in n for k in ["catalog", "catálog", "datasheet", "especific", "ficha"]):
         return "Catálogo Técnico / Datasheet"
-    if any(k in n for k in ["lei", "decreto", "codigo", "código", "portaria", "resoluc", "diario", "diário"]):
+    if any(k in n for k in ["lei", "decreto", "codigo", "código", "portaria", "resoluc"]):
         return "Legislação & Regulamentos"
     return "Norma Técnica (ABNT/NBR/NR/IEC)"
 

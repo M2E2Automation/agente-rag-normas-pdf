@@ -1,3 +1,4 @@
+import motor_cientifico as mc
 import ast
 import json
 import math
@@ -29,7 +30,7 @@ def _avaliar_no_ast(node):
     if isinstance(node, ast.UnaryOp) and type(node.op) in _OPS_SEGUROS:
         return _OPS_SEGUROS[type(node.op)](_avaliar_no_ast(node.operand))
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
-        funcs = {"sqrt": math.sqrt, "log10": math.log10, "sin": math.sin, "cos": math.cos, "pi": lambda: math.pi}
+        funcs = {"sqrt": math.sqrt, "log10": math.log10, "sin": math.sin, "cos": math.cos, "pi": lambda: math.pi, "fractal": mc.dimensao_fractal_auto_similar}
         if node.func.id in funcs:
             args = [_avaliar_no_ast(a) for a in node.args]
             return float(funcs[node.func.id](*args))
