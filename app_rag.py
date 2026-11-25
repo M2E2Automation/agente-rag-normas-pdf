@@ -164,9 +164,13 @@ aba1, aba2, aba3 = st.tabs([
 
 with aba1:
     st.caption("💡 **Exemplos de instruções:** *'Extraia os dados nominais deste equipamento e monte uma tabela técnica'* • *'Redija o memorial descritivo de conformidade com a NBR para nossa proposta comercial'*")
-    for msg in st.session_state["chat_rag"]:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    janela_chat = st.container(height=440, border=True)
+    with janela_chat:
+        if not st.session_state["chat_rag"]:
+            st.info("👋 **Sala Técnica pronta!** Digite sua instrução abaixo para extrair especificações das normas, manuais ou catálogos e redigir relatórios descritivos ou propostas comerciais.")
+        for msg in st.session_state["chat_rag"]:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
 
     instrucao = st.chat_input("Instrua o agente (ex.: Extraia as especificações do equipamento e redija o texto da proposta comercial)...")
     if instrucao:
