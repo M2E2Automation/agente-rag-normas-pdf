@@ -31,6 +31,17 @@ class TrechoDocumento:
     score: float = 0.0
     metodo: str = "Texto Nativo"
 
+
+def classificar_categoria_documento(nome_arquivo: str) -> str:
+    n = nome_arquivo.lower()
+    if any(k in n for k in ["manual", "instruc", "operac", "manutenc", "guia"]):
+        return "Manual de Máquina/Equipamento"
+    if any(k in n for k in ["catalog", "catálog", "datasheet", "especific", "ficha", "brochure"]):
+        return "Catálogo Técnico / Datasheet"
+    if any(k in n for k in ["lei", "decreto", "codigo", "código", "portaria", "resoluc", "diario", "diário"]):
+        return "Legislação & Regulamentos"
+    return "Norma Técnica (ABNT/NBR/NR/IEC)"
+
 def sanitizar_nome_arquivo(nome: str) -> str:
     base = os.path.basename(str(nome)).strip()
     if not base or not base.lower().endswith(".pdf"):
@@ -46,7 +57,8 @@ def init_db_rag():
             arquivo TEXT NOT NULL,
             pagina INTEGER NOT NULL,
             texto TEXT NOT NULL,
-            metodo TEXT DEFAULT 'Texto Nativo'
+            metodo TEXT DEFAULT 'Texto Nativo',
+            categoria TEXT DEFAULT 'Norma Técnica (ABNT/NBR/NR/IEC)'
         )
     """)
     con.commit()
@@ -82,6 +94,7 @@ def indexar_pdf(caminho_ou_buffer, nome_arquivo: str) -> int:
     reader = PdfReader(caminho_ou_buffer)
     con = sqlite3.connect(DB_RAG)
     cur = con.cursor()
+    categoria_doc = classificar_categoria_documento(nome_seguro)
     cur.execute("DELETE FROM chunks WHERE arquivo = ?", (nome_seguro,))
 
     total_chunks = 0
@@ -104,8 +117,8 @@ def indexar_pdf(caminho_ou_buffer, nome_arquivo: str) -> int:
         pedacos = fatiar_texto(texto_pag)
         for p in pedacos:
             cur.execute(
-                "INSERT INTO chunks (arquivo, pagina, texto, metodo) VALUES (?, ?, ?, ?)",
-                (nome_seguro, num_pag, p, metodo_pag)
+                "INSERT INTO chunks (arquivo, pagina, texto, metodo, categoria) VALUES (?, ?, ?, ?, ?)",
+                (nome_seguro, num_pag, p, metodo_pag, categoria_doc)
             )
             total_chunks += 1
 
@@ -119,6 +132,7 @@ def remover_documento(nome_arquivo: str) -> None:
     init_db_rag()
     con = sqlite3.connect(DB_RAG)
     cur = con.cursor()
+    categoria_doc = classificar_categoria_documento(nome_seguro)
     cur.execute("DELETE FROM chunks WHERE arquivo = ?", (nome_seguro,))
     con.commit()
     con.close()
@@ -128,7 +142,7 @@ def reconstruir_indice_vetorial() -> bool:
     init_db_rag()
     con = sqlite3.connect(DB_RAG)
     cur = con.cursor()
-    rows = cur.execute("SELECT id, arquivo, pagina, texto, metodo FROM chunks ORDER BY id").fetchall()
+    rows = cur.execute("SELECT id, arquivo, pagina, texto, metodo, categoria FROM chunks ORDER BY id").fetchall()
     con.close()
 
     if not rows:
@@ -153,7 +167,7 @@ def reconstruir_indice_vetorial() -> bool:
     os.chmod(INDEX_PATH, 0o600)
     return True
 
-def buscar_trechos_relevantes(pergunta: str, top_k: int = 4, filtro_arquivo: Optional[str] = None) -> List[TrechoDocumento]:
+def buscar_trechos_relevantes(pergunta: str, top_k: int = 4, filtro_arquivo: Optional[str] = None, filtro_categoria: Optional[str] = None) -> List[TrechoDocumento]:
     if not os.path.exists(INDEX_PATH):
         return list()
 
@@ -193,7 +207,9 @@ def buscar_trechos_relevantes(pergunta: str, top_k: int = 4, filtro_arquivo: Opt
         sc_bruto = float(rrf_scores[idx])
         if sc_bruto <= 0.0:
             break
-        cid, arq, pag, txt, met = rows[idx]
+        cid, arq, pag, txt, met, cat = rows[idx]
+        if filtro_categoria and filtro_categoria != "Todas as Categorias" and cat != filtro_categoria:
+            continue
         if filtro_arquivo and filtro_arquivo != "Todos os Documentos" and arq != filtro_arquivo:
             continue
         confianca_pct = min(1.0, sc_bruto / max_possivel)
@@ -214,6 +230,6 @@ def listar_documentos_indexados() -> List[Tuple[str, int]]:
     init_db_rag()
     con = sqlite3.connect(DB_RAG)
     cur = con.cursor()
-    res = cur.execute("SELECT arquivo, COUNT(*) FROM chunks GROUP BY arquivo ORDER BY arquivo").fetchall()
+    res = cur.execute("SELECT arquivo, COUNT(*), MAX(categoria) FROM chunks GROUP BY arquivo ORDER BY categoria, arquivo").fetchall()
     con.close()
     return res

@@ -142,8 +142,10 @@ with st.sidebar:
 
     st.divider()
     st.markdown("### 🎯 Escopo da Pesquisa")
+    categorias_disp = ["Todas as Categorias", "Norma Técnica (ABNT/NBR/NR/IEC)", "Legislação & Regulamentos", "Manual de Máquina/Equipamento", "Catálogo Técnico / Datasheet"]
+    categoria_sel = st.selectbox("Filtrar por categoria:", categorias_disp)
     opcoes_filtro = ["Todos os Documentos"] + nomes_docs
-    filtro_selecionado = st.selectbox("Filtrar na estante:", opcoes_filtro)
+    filtro_selecionado = st.selectbox("Filtrar por volume específico:", opcoes_filtro)
     top_k = st.slider("Trechos por consulta", 1, 8, 4)
 
     st.divider()
@@ -165,7 +167,7 @@ with aba1:
     )
 
     if pergunta:
-        resultados = buscar_trechos_relevantes(pergunta, top_k=top_k, filtro_arquivo=filtro_selecionado)
+        resultados = buscar_trechos_relevantes(pergunta, top_k=top_k, filtro_arquivo=filtro_selecionado, filtro_categoria=categoria_sel)
         if not resultados:
             st.warning("Nenhum trecho correspondente encontrado no escopo selecionado. Tente termos presentes na norma.")
         else:
@@ -204,13 +206,15 @@ with aba2:
     else:
         cols = st.columns(3)
         for idx, doc_info in enumerate(docs):
-            nome_arq = list(doc_info).pop(0)
-            qtd_ch = list(doc_info).pop(1)
+            lista_info = list(doc_info)
+            nome_arq = lista_info.pop(0)
+            qtd_ch = lista_info.pop(0)
+            cat_arq = lista_info.pop(0) if lista_info else "Acervo Técnico"
             with cols[idx % 3]:
                 st.markdown(f"""
                 <div class="book-card">
                     <div class="book-title">📘 {nome_arq}</div>
-                    <div class="book-meta">Fragmentos indexados: <b>{qtd_ch} trechos</b><br>Status: Protegido (SQLite 0600)</div>
+                    <div class="book-meta">Categoria: <b>{cat_arq}</b><br>Fragmentos: <b>{qtd_ch} trechos</b> • SQLite 0600</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -243,7 +247,7 @@ with aba3:
     st.divider()
     st.markdown("#### 🤖 Importação Automática do Computador (ABNT, NBR, NR, IEC, Leis)")
     pasta_custom = st.text_input("Pasta raiz para varrer (ou deixe padrão):", value="~/Downloads, ~/Documentos, ~/Área de Trabalho")
-    apenas_normas = st.checkbox("Filtrar apenas nomes com ABNT, NBR, NR, IEC, ISO ou Lei", value=True)
+    apenas_normas = st.checkbox("Filtrar por palavras-chave (ABNT, NBR, NR, IEC, Lei, Manual, Catálogo, Datasheet)", value=True)
     if st.button("Varrer Pastas, Copiar & Indexar Agora", type="primary"):
         lista_pastas = [x.strip() for x in pasta_custom.split(",") if x.strip()]
         with st.spinner("Varrendo diretórios e catalogando normas na estante..."):
