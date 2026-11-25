@@ -95,7 +95,7 @@ def fatiar_texto(texto: str, tamanho_chunk: int = 900, overlap: int = 180) -> Li
         inicio += (tamanho_chunk - overlap)
     return chunks
 
-def indexar_pdf(caminho_ou_buffer, nome_arquivo: str) -> int:
+def indexar_pdf(caminho_ou_buffer, nome_arquivo: str, atualizar_indice: bool = True) -> int:
     nome_seguro = sanitizar_nome_arquivo(nome_arquivo)
     if hasattr(caminho_ou_buffer, "size") and caminho_ou_buffer.size > MAX_PDF_BYTES:
         raise ValueError("Arquivo PDF excede o limite de seguranca (1 GB).")
@@ -134,7 +134,8 @@ def indexar_pdf(caminho_ou_buffer, nome_arquivo: str) -> int:
 
     con.commit()
     con.close()
-    reconstruir_indice_vetorial()
+    if atualizar_indice:
+        reconstruir_indice_vetorial()
     return total_chunks
 
 def remover_documento(nome_arquivo: str) -> None:
@@ -146,7 +147,8 @@ def remover_documento(nome_arquivo: str) -> None:
     cur.execute("DELETE FROM chunks WHERE arquivo = ?", (nome_seguro,))
     con.commit()
     con.close()
-    reconstruir_indice_vetorial()
+    if atualizar_indice:
+        reconstruir_indice_vetorial()
 
 def reconstruir_indice_vetorial() -> bool:
     init_db_rag()
