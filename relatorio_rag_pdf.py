@@ -7,7 +7,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from motor_rag import TrechoDocumento
 
-def gerar_pdf_consulta_rag(pergunta: str, filtro_doc: str, resultados: List[TrechoDocumento]) -> bytes:
+def _esc(texto: str) -> str:
+    return str(texto).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+def gerar_pdf_consulta_rag(pergunta: str, filtro_doc: str, resultados: List[TrechoDocumento], sintese_ia: str = "") -> bytes:
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
@@ -19,18 +22,22 @@ def gerar_pdf_consulta_rag(pergunta: str, filtro_doc: str, resultados: List[Trec
 
     elems = list()
     elems.append(Paragraph("Parecer Técnico & Rastreabilidade Documental (Agente RAG)", titulo))
-    elems.append(Paragraph(f"Data/Hora: {datetime.now().strftime('%d/%m/%Y %H:%M')} | Escopo: {filtro_doc}", meta))
+    elems.append(Paragraph(f"Data/Hora: {datetime.now().strftime('%d/%m/%Y %H:%M')} | Escopo: {_esc(filtro_doc)}", meta))
     elems.append(Spacer(1, 6))
+    elems.append(Paragraph(f"<b>Consulta Realizada:</b> {_esc(pergunta)}", corpo))
 
-    pergunta_segura = pergunta.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    elems.append(Paragraph(f"<b>Consulta Realizada:</b> {pergunta_segura}", corpo))
+    if sintese_ia and not sintese_ia.startswith("⚠️"):
+        elems.append(Paragraph("Parecer Técnico Sintetizado (IA Auditada por Fontes)", sub))
+        for linha in sintese_ia.split("\n"):
+            if linha.strip():
+                elems.append(Paragraph(_esc(linha.strip()), corpo))
+
     elems.append(Spacer(1, 6))
+    elems.append(Paragraph("Evidências Originais Extraídas dos Documentos", sub))
 
     for i, item in enumerate(resultados, start=1):
-        arq_seguro = item.arquivo.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        txt_seguro = item.texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        elems.append(Paragraph(f"Evidência {i}: {arq_seguro} — Página {item.pagina} (Relevância: {item.score*100:.1f}%)", sub))
-        elems.append(Paragraph(f"<i>\"{txt_seguro}\"</i>", corpo))
+        elems.append(Paragraph(f"Fonte {i}: {_esc(item.arquivo)} — Página {item.pagina} (Relevância: {item.score*100:.1f}%)", sub))
+        elems.append(Paragraph(f"<i>\"{_esc(item.texto)}\"</i>", corpo))
 
     doc.build(elems)
     return buffer.getvalue()
