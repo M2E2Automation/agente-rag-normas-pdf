@@ -33,7 +33,7 @@ with st.sidebar:
         api_key = st.text_input("Chave API OpenAI", type="password", help="Mantida apenas na memória RAM desta sessão.")
         modelo = st.selectbox("Modelo OpenAI", ["gpt-4o-mini", "gpt-4o"], index=0)
     elif provedor == "Ollama Local (Offline)":
-        modelo = st.text_input("Nome do Modelo no Ollama", value="llama3.2", help="Ex.: llama3.2, qwen2.5, mistral")
+        modelo = st.text_input("Nome do Modelo no Ollama", value="qwen2.5:1.5b", help="Ex.: llama3.2, qwen2.5, mistral")
 
     st.divider()
     st.header("2. Base de Conhecimento (PDFs)")
