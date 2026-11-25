@@ -158,10 +158,11 @@ with st.sidebar:
     c_s1.metric("Volumes", len(docs))
     c_s2.metric("Trechos", total_trechos_geral)
 
-aba1, aba2, aba3 = st.tabs([
+aba1, aba2, aba3, aba4 = st.tabs([
     "💬 1. Sala Técnica (Chat & Propostas)",
     "📚 2. Estante Digital (Acervo)",
     "📥 3. Catalogar & Gerir PDFs",
+    "🧠 4. Editor de Prompts",
 ])
 
 with aba1:
@@ -275,3 +276,46 @@ with aba3:
         st.success(f"Concluído! Copiados: {res['copiados']} | Novos indexados: {res['indexados']} | Já existiam: {res['ja_existiam']}")
         if res["indexados"] > 0:
             st.rerun()
+
+with aba4:
+    st.markdown("#### 🧠 Editor de Engenharia de Prompt (Perfis de Raciocínio)")
+    st.caption("Crie ou personalize como o agente pensa e estrutura relatórios técnicos e propostas comerciais. As alterações atualizam automaticamente o seletor da barra lateral.")
+
+    col_ed1, col_ed2 = st.columns(2)
+
+    with col_ed1:
+        st.markdown("##### ✏️ Editar Perfil Existente")
+        arquivos_md = sorted(PASTA_PROMPTS.glob("*.md"))
+        if arquivos_md:
+            mapa_arqs = {arq.stem.replace("_", " ").title(): arq for arq in arquivos_md}
+            nome_sel_ed = st.selectbox("Escolha o perfil para editar:", list(mapa_arqs.keys()))
+            arq_alvo = mapa_arqs[nome_sel_ed]
+            texto_atual = arq_alvo.read_text(encoding="utf-8")
+
+            novo_texto = st.text_area("Instruções de Raciocínio e Formatação:", value=texto_atual, height=280, key="area_ed_prompt")
+            if st.button("💾 Salvar Alterações no Perfil", type="primary"):
+                arq_alvo.write_text(novo_texto, encoding="utf-8")
+                st.success(f"Perfil **{nome_sel_ed}** atualizado com sucesso!")
+                st.rerun()
+        else:
+            st.info("Nenhum arquivo .md encontrado na pasta prompts/.")
+
+    with col_ed2:
+        st.markdown("##### ➕ Criar Novo Perfil de Especialidade")
+        nome_novo = st.text_input("Nome do arquivo (ex.: 05_engenheiro_automacao):", placeholder="05_engenheiro_automacao")
+        texto_novo = st.text_area(
+            "Instruções do Novo Perfil:",
+            height=280,
+            placeholder="Você é um Engenheiro Sênior especialista em [Área]. Extraia [Grandezas], verifique [Normas] e cite obrigatoriamente [Arquivo.pdf, Página X]...",
+            key="area_novo_prompt",
+        )
+        if st.button("✨ Criar Novo Perfil (.md)", type="primary"):
+            import re
+            nome_limpo = re.sub(r"[^a-zA-Z0-9_-]", "_", nome_novo.strip()).strip("_").lower()
+            if not nome_limpo or not texto_novo.strip():
+                st.error("Preencha o nome do perfil e as instruções antes de criar.")
+            else:
+                destino_md = PASTA_PROMPTS / f"{nome_limpo}.md"
+                destino_md.write_text(texto_novo.strip(), encoding="utf-8")
+                st.success(f"Novo perfil **{destino_md.name}** criado e adicionado à barra lateral!")
+                st.rerun()
