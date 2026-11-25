@@ -1,61 +1,76 @@
-import os
 import streamlit as st
 from motor_rag import (
     init_db_rag,
     indexar_pdf,
+    remover_documento,
     buscar_trechos_relevantes,
+    destacar_termos_html,
     listar_documentos_indexados,
 )
+from relatorio_rag_pdf import gerar_pdf_consulta_rag
 
 st.set_page_config(page_title="Agente RAG — Normas Técnicas & Leis (PDF)", layout="wide")
 init_db_rag()
 
 st.title("Agente de IA com RAG — Consulta de Normas Técnicas e Leis em PDF")
-st.markdown("Faça upload de **leis, regulamentos ou normas técnicas em PDF** na barra lateral e faça perguntas com **citação exata de página e fonte**.")
+st.markdown("Pesquise em **normas técnicas, contratos ou leis em PDF** com filtro por documento, **destaque automático de palavras-chave** e exportação de **parecer auditável em PDF**.")
 
 with st.sidebar:
     st.header("1. Base de Conhecimento (PDFs)")
-    arquivos_pdf = st.file_uploader(
-        "Envie um ou mais documentos PDF",
-        type=["pdf"],
-        accept_multiple_files=True,
-        help="Limite recomendado: até 50 MB por arquivo."
-    )
+    arquivos_pdf = st.file_uploader("Envie um ou mais documentos PDF", type=["pdf"], accept_multiple_files=True)
 
     if arquivos_pdf and st.button("Indexar Documentos na Base", type="primary"):
         for arq in arquivos_pdf:
-            if arq.size > 50 * 1024 * 1024:
-                st.error(f"Arquivo {arq.name} excede 50 MB.")
-                continue
-            with st.spinner(f"Lendo e indexando {arq.name}..."):
-                qtd = indexar_pdf(arq, arq.name)
-            st.success(f"**{arq.name}**: {qtd} trechos indexados!")
+            try:
+                with st.spinner(f"Lendo e indexando {arq.name}..."):
+                    qtd = indexar_pdf(arq, arq.name)
+                st.success(f"**{arq.name}**: {qtd} trechos indexados!")
+            except ValueError as e:
+                st.error(str(e))
 
     st.divider()
-    st.subheader("Documentos Ativos no Banco")
+    st.subheader("2. Filtro e Gestão de Normas")
     docs = listar_documentos_indexados()
+    nomes_docs = [d[0] for d in docs]
+
     if docs:
+        filtro_selecionado = st.selectbox("Filtrar pesquisa por norma:", ["Todos os Documentos"] + nomes_docs)
         for nome, total in docs:
             st.caption(f"📄 **{nome}** ({total} trechos)")
+        with st.expander("Remover documento da base"):
+            doc_remover = st.selectbox("Escolha o PDF para excluir:", nomes_docs)
+            if st.button("Excluir PDF Selecionado"):
+                remover_documento(doc_remover)
+                st.rerun()
     else:
+        filtro_selecionado = "Todos os Documentos"
         st.info("Nenhum PDF indexado ainda.")
 
     st.divider()
-    top_k = st.slider("Quantidade de trechos citados por resposta", 1, 8, 4)
+    top_k = st.slider("Trechos exibidos por resposta", 1, 8, 4)
 
-# Area principal de consulta
 pergunta = st.text_input(
-    "Faça sua pergunta técnica ou jurídica sobre os documentos indexados:",
-    placeholder="Ex.: Quais são os requisitos de licenciamento ambiental ou prazo de garantia estrutural?"
+    "Faça sua pergunta técnica ou jurídica sobre os documentos:",
+    placeholder="Ex.: Quais são os requisitos de licenciamento ambiental, taxas ou prazos de garantia?"
 )
 
 if pergunta:
-    resultados = buscar_trechos_relevantes(pergunta, top_k=top_k)
+    resultados = buscar_trechos_relevantes(pergunta, top_k=top_k, filtro_arquivo=filtro_selecionado)
     if not resultados:
-        st.warning("Nenhum trecho correspondente foi encontrado nos documentos indexados. Tente usar palavras-chave presentes no PDF.")
+        st.warning("Nenhum trecho correspondente encontrado. Tente usar termos técnicos presentes no documento.")
     else:
-        st.subheader("Evidências Encontradas nos Documentos")
+        pdf_parecer = gerar_pdf_consulta_rag(pergunta, filtro_selecionado, resultados)
+        st.download_button(
+            label="Baixar Parecer Técnico da Consulta (PDF)",
+            data=pdf_parecer,
+            file_name="Parecer_Consulta_Normas_RAG.pdf",
+            mime="application/pdf",
+            type="primary"
+        )
+
+        st.subheader(f"Evidências Encontradas ({len(resultados)} trechos)")
         for i, item in enumerate(resultados, start=1):
+            html_destacado = destacar_termos_html(item.texto, pergunta)
             with st.expander(f"Fonte {i}: {item.arquivo} — Página {item.pagina} (Relevância: {item.score*100:.1f}%)", expanded=(i <= 2)):
-                st.markdown(f"> {item.texto}")
+                st.markdown(html_destacado, unsafe_allow_html=True)
                 st.caption(f"Rastreabilidade: Arquivo `{item.arquivo}` | Página `{item.pagina}` | ID Trecho `#{item.id}`")
