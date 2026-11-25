@@ -1,4 +1,4 @@
-from agente_consultor import conversar_com_agente, PERFIS_ESTRUTURA
+from agente_consultor import conversar_com_agente, carregar_perfis_prompts, PASTA_PROMPTS
 from importador_lote import varrer_e_catalogar
 import streamlit as st
 from motor_rag import (
@@ -196,6 +196,7 @@ with aba1:
                     provedor=provedor,
                     api_key=api_key,
                     modelo=modelo,
+                    perfil=perfil_agente,
                 )
             st.markdown(resposta)
 
