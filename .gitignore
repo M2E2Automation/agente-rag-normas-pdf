@@ -5,3 +5,7 @@ __pycache__/
 
 documentos/*.pdf
 
+.agents/
+streamlit_rag.log
+ollama.log
+

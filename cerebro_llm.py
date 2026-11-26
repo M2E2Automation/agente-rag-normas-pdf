@@ -15,7 +15,7 @@ SYSTEM_PROMPT_RAG = (
 )
 
 def montar_contexto_rag(pergunta: str, trechos: List[TrechoDocumento]) -> str:
-    blocos = []
+    blocos = list()
     for i, t in enumerate(trechos, start=1):
         blocos.append(f"--- TRECHO {i} | FONTE: [{t.arquivo}, Página {t.pagina}] ---\n{t.texto}")
     contexto_str = "\n\n".join(blocos)
@@ -26,7 +26,7 @@ def gerar_sintese_llm(
     trechos: List[TrechoDocumento],
     provedor: str,
     api_key: str = "",
-    modelo: str = "gemini-2.5-flash",
+    modelo: str = "qwen2.5:1.5b",
 ) -> str:
     if not trechos:
         return "Nenhum trecho documental foi recuperado para fundamentar a resposta."
@@ -53,7 +53,9 @@ def gerar_sintese_llm(
             )
             with urllib.request.urlopen(req, timeout=25, context=ctx_ssl) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                return data["candidates"][0]["content"]["parts"][0]["text"]
+                cand = list(data["candidates"]).pop(0)
+                part = list(cand["content"]["parts"]).pop(0)
+                return part["text"]
 
         elif provedor == "OpenAI":
             if not api_key.strip():
@@ -78,7 +80,8 @@ def gerar_sintese_llm(
             )
             with urllib.request.urlopen(req, timeout=25, context=ctx_ssl) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                return data["choices"][0]["message"]["content"]
+                choice = list(data["choices"]).pop(0)
+                return choice["message"]["content"]
 
         elif provedor == "Ollama Local (Offline)":
             url = "http://127.0.0"
@@ -97,7 +100,7 @@ def gerar_sintese_llm(
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=60) as resp:
+            with urllib.request.urlopen(req, timeout=90) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["message"]["content"]
 
