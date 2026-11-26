@@ -59,7 +59,7 @@ def sanitizar_nome_arquivo(nome: str) -> str:
     return base
 
 def init_db_rag():
-    con = sqlite3.connect(DB_RAG)
+    con = sqlite3.connect(DB_RAG, timeout=30.0)
     cur = con.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS chunks (
@@ -102,7 +102,7 @@ def indexar_pdf(caminho_ou_buffer, nome_arquivo: str, atualizar_indice: bool = T
 
     init_db_rag()
     reader = PdfReader(caminho_ou_buffer)
-    con = sqlite3.connect(DB_RAG)
+    con = sqlite3.connect(DB_RAG, timeout=30.0)
     cur = con.cursor()
     categoria_doc = classificar_categoria_documento(nome_seguro)
     cur.execute("DELETE FROM chunks WHERE arquivo = ?", (nome_seguro,))
@@ -141,7 +141,7 @@ def indexar_pdf(caminho_ou_buffer, nome_arquivo: str, atualizar_indice: bool = T
 def remover_documento(nome_arquivo: str) -> None:
     nome_seguro = sanitizar_nome_arquivo(nome_arquivo)
     init_db_rag()
-    con = sqlite3.connect(DB_RAG)
+    con = sqlite3.connect(DB_RAG, timeout=30.0)
     cur = con.cursor()
     categoria_doc = classificar_categoria_documento(nome_seguro)
     cur.execute("DELETE FROM chunks WHERE arquivo = ?", (nome_seguro,))
@@ -152,7 +152,7 @@ def remover_documento(nome_arquivo: str) -> None:
 
 def reconstruir_indice_vetorial() -> bool:
     init_db_rag()
-    con = sqlite3.connect(DB_RAG)
+    con = sqlite3.connect(DB_RAG, timeout=30.0)
     cur = con.cursor()
     rows = cur.execute("SELECT id, arquivo, pagina, texto, metodo, categoria FROM chunks ORDER BY id").fetchall()
     con.close()
@@ -240,7 +240,7 @@ def destacar_termos_html(texto: str, pergunta: str) -> str:
 
 def listar_documentos_indexados() -> List[Tuple[str, int]]:
     init_db_rag()
-    con = sqlite3.connect(DB_RAG)
+    con = sqlite3.connect(DB_RAG, timeout=30.0)
     cur = con.cursor()
     res = cur.execute("SELECT arquivo, COUNT(*), MAX(categoria) FROM chunks GROUP BY arquivo ORDER BY categoria, arquivo").fetchall()
     con.close()
