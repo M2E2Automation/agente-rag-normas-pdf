@@ -101,7 +101,7 @@ def indexar_pdf(caminho_ou_buffer, nome_arquivo: str, atualizar_indice: bool = T
         raise ValueError("Arquivo PDF excede o limite de seguranca (1 GB).")
 
     init_db_rag()
-    reader = PdfReader(caminho_ou_buffer)
+    reader = PdfReader(caminho_ou_buffer, strict=False)
     con = sqlite3.connect(DB_RAG, timeout=30.0)
     cur = con.cursor()
     categoria_doc = classificar_categoria_documento(nome_seguro)
@@ -115,7 +115,7 @@ def indexar_pdf(caminho_ou_buffer, nome_arquivo: str, atualizar_indice: bool = T
         metodo_pag = "Texto Nativo"
 
         # Aciona OCR automaticamente se a pagina for imagem escaneada (< 30 caracteres)
-        if len(limpar_texto(texto_pag)) < 30 and OCR_DISPONIVEL and eh_caminho_str:
+        if False:
             try:
                 imagens = convert_from_path(str(caminho_ou_buffer), first_page=num_pag, last_page=num_pag, dpi=200)
                 if imagens:
