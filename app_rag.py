@@ -118,6 +118,41 @@ st.markdown("""
     [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {
         color: #0F172A !important;
     }
+
+    .usp-stats-bar {
+        background: #FFFFFF;
+        border: 1px solid #BAE6FD;
+        border-top: 4px solid #0284C7;
+        border-radius: 12px;
+        padding: 1.1rem 1.5rem;
+        margin-bottom: 1.2rem;
+        display: flex;
+        justify-content: space-around;
+        text-align: center;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    }
+    .usp-stat-item {
+        flex: 1;
+        border-right: 1px dashed #94A3B8;
+        padding: 0 0.8rem;
+    }
+    .usp-stat-item:last-child {
+        border-right: none;
+    }
+    .usp-stat-num {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #0F172A;
+        line-height: 1.1;
+    }
+    .usp-stat-label {
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: #0369A1;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 0.25rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -164,6 +199,31 @@ with st.sidebar:
     c_s1, c_s2 = st.columns(2)
     c_s1.metric("Volumes", len(docs))
     c_s2.metric("Trechos", total_trechos_geral)
+
+
+# Faixa Editorial "Acervo em Numeros" inspirada em portais academicos/cientificos
+total_trechos_top = sum(list(d).pop(1) for d in docs) if docs else 0
+qtd_perfis_top = len(carregar_perfis_prompts())
+st.markdown(f"""
+<div class="usp-stats-bar">
+    <div class="usp-stat-item">
+        <div class="usp-stat-num">{len(docs)}</div>
+        <div class="usp-stat-label">Volumes Catalogados</div>
+    </div>
+    <div class="usp-stat-item">
+        <div class="usp-stat-num">{total_trechos_top:,}</div>
+        <div class="usp-stat-label">Trechos Indexados</div>
+    </div>
+    <div class="usp-stat-item">
+        <div class="usp-stat-num">{qtd_perfis_top}</div>
+        <div class="usp-stat-label">Perfis de Engenharia</div>
+    </div>
+    <div class="usp-stat-item">
+        <div class="usp-stat-num">7 + ASHRAE</div>
+        <div class="usp-stat-label">Fabricantes HVAC Integrados</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 aba1, aba2, aba3, aba4 = st.tabs([
     "💬 1. Sala Técnica (Chat & Propostas)",
