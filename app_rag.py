@@ -25,6 +25,13 @@ if 'ultima_instrucao' not in st.session_state: st.session_state['ultima_instruca
 # Estilo customizado: Estante de Livros High-Tech (Clean & Sofisticado)
 st.markdown("""
 <style>
+    @import url("https://googleapis.com");
+    html, body, [class*="css"] {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif !important;
+    }
+    code, pre, [data-testid="stMetricValue"] {
+        font-family: "JetBrains Mono", monospace !important;
+    }
     /* Fundo azul claro suave em toda a aplicacao */
     .stApp {
         background-color: #E0F2FE;
@@ -79,7 +86,7 @@ st.markdown("""
         margin: 0;
         font-size: 0.95rem;
     }
-    .book-card {
+    .book-card { transition: transform 0.18s ease, box-shadow 0.18s ease; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
         background: #FFFFFF;
         border: 1px solid #7DD3FC;
         border-left: 5px solid #0284C7;
