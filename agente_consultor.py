@@ -1,3 +1,4 @@
+from ponte_api_cientifica import consultar_ferramentas_api_automatico
 from seguranca_rag import neutralizar_prompt_injection, validar_expressao_matematica_segura
 import motor_cientifico as mc
 import ast
@@ -107,6 +108,8 @@ def conversar_com_agente(
     api_key: str = "",
     modelo: str = "qwen2.5:1.5b",
     perfil: str = "",
+    usar_api_cientifica: bool = True,
+    buscar_fontes_publicas: bool = False,
 ) -> str:
     if provedor == "Apenas Busca Extrativa (Sem API)":
         if not trechos:
@@ -116,7 +119,9 @@ def conversar_com_agente(
             linhas.append(f"- **[{t.arquivo}, Página {t.pagina}]**: {t.texto}")
         return "\n".join(linhas)
 
-    mensagens = montar_mensagens_chat(historico, instrucao_atual, trechos, perfil)
+    dados_api = consultar_ferramentas_api_automatico(instrucao_atual, buscar_fontes_publicas) if usar_api_cientifica else ""
+    instrucao_enriquecida = f"{instrucao_atual}\n\n{dados_api}".strip() if dados_api else instrucao_atual
+    mensagens = montar_mensagens_chat(historico, instrucao_enriquecida, trechos, perfil)
     ctx_ssl = ssl.create_default_context()
     ctx_ssl.minimum_version = ssl.TLSVersion.TLSv1_2
 
