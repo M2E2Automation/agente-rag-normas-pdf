@@ -1,3 +1,4 @@
+from seguranca_rag import validar_expressao_matematica_segura
 import math
 import numpy as np
 import sympy as sp
@@ -6,7 +7,8 @@ from scipy import constants, integrate
 def resolver_calculo_simbolico(expressao: str, variavel: str = "x", operacao: str = "simplificar") -> str:
     """Executa algebra, derivadas, integrais e resolucao de equacoes via SymPy."""
     x = sp.Symbol(variavel)
-    expr = sp.sympify(expressao)
+    expr_segura = validar_expressao_matematica_segura(expressao)
+    expr = sp.sympify(expr_segura)
     if operacao == "derivar":
         res = sp.diff(expr, x)
     elif operacao == "integrar":

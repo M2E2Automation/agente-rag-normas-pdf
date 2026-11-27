@@ -1,3 +1,5 @@
+from seguranca_rag import assinar_bytes, verificar_assinatura_bytes, sanitizar_caminho_seguro
+from pathlib import Path
 import os
 import re
 import pickle
@@ -169,22 +171,29 @@ def reconstruir_indice_vetorial() -> bool:
     corpus_tokenizado = [normalizar_tokens_bm25(t) for t in textos]
     bm25 = BM25Okapi(corpus_tokenizado)
 
+    payload_bytes = pickle.dumps({"rows": rows, "vectorizer": vectorizer, "matriz_tfidf": matriz_tfidf, "bm25": bm25})
     with open(INDEX_PATH, "wb") as f:
-        pickle.dump({
-            "rows": rows,
-            "vectorizer": vectorizer,
-            "matriz_tfidf": matriz_tfidf,
-            "bm25": bm25
-        }, f)
+        f.write(payload_bytes)
+    with open(INDEX_PATH + ".sig", "w", encoding="utf-8") as fs:
+        fs.write(assinar_bytes(payload_bytes))
     os.chmod(INDEX_PATH, 0o600)
+    os.chmod(INDEX_PATH + ".sig", 0o600)
     return True
 
 def buscar_trechos_relevantes(pergunta: str, top_k: int = 4, filtro_arquivo: Optional[str] = None, filtro_categoria: Optional[str] = None) -> List[TrechoDocumento]:
     if not os.path.exists(INDEX_PATH):
         return list()
 
+    sig_path = INDEX_PATH + ".sig"
+    if not os.path.exists(sig_path):
+        raise SecurityError("Assinatura de integridade do indice ausente!") if "SecurityError" in globals() else ValueError("Assinatura HMAC do indice ausente! Reconstrua o indice.")
     with open(INDEX_PATH, "rb") as f:
-        dados = pickle.load(f)
+        raw_bytes = f.read()
+    with open(sig_path, "r", encoding="utf-8") as fs:
+        sig_esperada = fs.read()
+    if not verificar_assinatura_bytes(raw_bytes, sig_esperada):
+        raise ValueError("ALERTA DE SEGURANCA: Indice vetorial adulterado (falha HMAC-SHA256)!")
+    dados = pickle.loads(raw_bytes)
 
     rows = dados["rows"]
     vectorizer = dados["vectorizer"]

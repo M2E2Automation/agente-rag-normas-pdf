@@ -9,3 +9,6 @@ documentos/*.pdf
 streamlit_rag.log
 ollama.log
 
+.rag_integrity.key
+*.sig
+
