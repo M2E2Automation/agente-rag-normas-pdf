@@ -140,7 +140,7 @@ def indexar_pdf(caminho_ou_buffer, nome_arquivo: str, atualizar_indice: bool = T
         reconstruir_indice_vetorial()
     return total_chunks
 
-def remover_documento(nome_arquivo: str) -> None:
+def remover_documento(nome_arquivo: str, atualizar_indice: bool = True) -> None:
     nome_seguro = sanitizar_nome_arquivo(nome_arquivo)
     init_db_rag()
     con = sqlite3.connect(DB_RAG, timeout=30.0)
@@ -214,10 +214,10 @@ def buscar_trechos_relevantes(pergunta: str, top_k: int = 4, filtro_arquivo: Opt
     k_rrf = 60.0
     rrf_scores = np.zeros(len(rows))
     for pos, idx in enumerate(rank_tfidf):
-        if scores_tfidf[idx] > 0.01:
+        if float(scores_tfidf.item(int(idx))) > 0.01:
             rrf_scores[idx] += 1.0 / (k_rrf + pos + 1)
     for pos, idx in enumerate(rank_bm25):
-        if scores_bm25[idx] > 0.1:
+        if float(scores_bm25.item(int(idx))) > 0.1:
             rrf_scores[idx] += 1.0 / (k_rrf + pos + 1)
 
     max_possivel = 2.0 / (k_rrf + 1.0)
@@ -225,7 +225,7 @@ def buscar_trechos_relevantes(pergunta: str, top_k: int = 4, filtro_arquivo: Opt
 
     resultados = list()
     for idx in indices_finais:
-        sc_bruto = float(rrf_scores[idx])
+        sc_bruto = float(rrf_scores.item(int(idx)))
         if sc_bruto <= 0.0:
             break
         cid, arq, pag, txt, met, cat = rows[idx]
